@@ -1,0 +1,49 @@
+# AgentShield requirements
+
+# This file documents the expected runtime and development dependencies.
+# Preserve the versions and package manager already used by the existing repository.
+# Do not install a second backend stack or migrate the JavaScript backend to Python.
+
+## Existing JavaScript / Node.js application
+# Use package.json and the lockfile as the source of truth for actual dependencies.
+# Common categories (only if already used or required by the existing implementation):
+# - Node.js supported LTS version
+# - Existing frontend framework and UI dependencies
+# - Existing backend framework and HTTP client
+# - Existing database driver / ORM and migration tooling
+# - Ed25519-capable cryptographic library or supported platform crypto API
+# - Test runner and HTTP/API test utilities
+# - Playwright, if browser end-to-end tests are part of the project
+
+## Part 1 functional requirements
+# - Agent registry and public-key lifecycle
+# - Ed25519 challenge-response verification
+# - Signed payment-intent validation
+# - Expiration and nonce/replay protection
+# - Key revocation
+# - Deterministic policy engine
+# - Spending limits and approval thresholds
+# - Transaction state management and audit logging
+# - Automated positive and negative security tests
+
+## Part 2 PayPal integration requirements
+# - PayPal REST API v2 and OAuth 2.0
+# - PayPal Orders API
+# - PayPal JavaScript SDK for buyer approval when applicable
+# - Server-side capture
+# - Verified PayPal webhooks and idempotent reconciliation
+# - PayPal Sandbox by default
+#
+# Typical Sandbox API base URL:
+# https://api-m.sandbox.paypal.com
+#
+# Typical environment variables (use .env.example with empty placeholders):
+# PAYPAL_ENV=sandbox
+# PAYPAL_CLIENT_ID=
+# PAYPAL_CLIENT_SECRET=
+# PAYPAL_WEBHOOK_ID=
+# NEXT_PUBLIC_PAYPAL_CLIENT_ID=
+# NEXT_PUBLIC_API_BASE_URL=
+#
+# Never put PAYPAL_CLIENT_SECRET in a frontend environment variable or commit
+# real credentials. Confirm actual variable names against the existing codebase.
