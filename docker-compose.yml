@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: agentshield-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: agentshield
+      POSTGRES_PASSWORD: change_me
+      POSTGRES_DB: agentshield
+    ports:
+      - "5432:5432"
+    volumes:
+      - agentshield_pgdata:/var/lib/postgresql/data
+volumes:
+  agentshield_pgdata:

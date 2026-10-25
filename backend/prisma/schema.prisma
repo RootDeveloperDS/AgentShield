@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AgentStatus {
+  ACTIVE
+  SUSPENDED
+  REVOKED
+}
+
+enum TransactionStatus {
+  PENDING_VERIFICATION
+  REJECTED
+  AWAITING_APPROVAL
+  READY_FOR_PAYMENT
+  ORDER_CREATED
+  AWAITING_BUYER_APPROVAL
+  CAPTURE_PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REQUIRES_RECONCILIATION
+}
+
+model Agent {
+  id          String      @id
+  name        String
+  publicKey   String      @db.Text
+  status      AgentStatus @default(ACTIVE)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  intents     PaymentIntent[]
+}
+
+model PaymentIntent {
+  id             String            @id
+  agentId        String
+  recipient      String
+  service        String
+  amountMinor    BigInt
+  currency       String
+  nonce          String            @unique
+  createdAt      DateTime
+  expiresAt      DateTime
+  status         TransactionStatus @default(PENDING_VERIFICATION)
+  decisionReason String?
+  paypalOrderId  String?
+  paypalCaptureId String?
+  createdRecordAt DateTime         @default(now())
+  agent          Agent             @relation(fields: [agentId], references: [id])
+}
+
+model AuditEvent {
+  id          String   @id @default(cuid())
+  eventType   String
+  entityId    String?
+  message     String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+}
+
+model WebhookEvent {
+  id          String   @id
+  eventType   String
+  processedAt DateTime @default(now())
+}
