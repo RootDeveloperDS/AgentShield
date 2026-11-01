@@ -4,7 +4,7 @@ import { z } from "zod";
 import { config } from "./config.js";
 import { prisma } from "./db.js";
 import { verifyIntentSignature, type SignedIntent } from "./crypto/intent.js";
-import { evaluatePolicy } from "./policy.js";
+import { evaluatePolicy, calculateAgentDailySpend, defaultPolicy } from "./policy.js";
 import { isPayPalConfigured, createPayPalOrder, capturePayPalOrder } from "./paypal.js";
 
 const app = express();
@@ -47,14 +47,19 @@ const intentSchema = z.object({
   currency: z.string().length(3).transform(v => v.toUpperCase()),
   createdAt: z.string().datetime(),
   expiresAt: z.string().datetime(),
-  nonce: z.string().min(12)
+  nonce: z.string().min(12),
+  riskFlags: z.array(z.string()).optional()
 });
 
 app.post("/api/intents/verify", async (req, res, next) => {
   try {
-    const bodySchema = z.object({ intent: intentSchema, signatureBase64: z.string().min(1) });
+    const bodySchema = z.object({
+      intent: intentSchema,
+      signatureBase64: z.string().min(1),
+      riskFlags: z.array(z.string()).optional()
+    });
     const body = bodySchema.parse(req.body);
-    const intent: SignedIntent = body.intent;
+    const intent: SignedIntent & { riskFlags?: string[] } = body.intent;
     const agent = await prisma.agent.findUnique({ where: { id: intent.agentId } });
     if (!agent || agent.status !== "ACTIVE") {
       await prisma.auditEvent.create({ data: { eventType: "INTENT_REJECTED", entityId: intent.intentId, message: "Unknown, suspended, or revoked agent" } });
@@ -68,7 +73,11 @@ app.post("/api/intents/verify", async (req, res, next) => {
     if (Date.parse(intent.expiresAt) <= now || Date.parse(intent.createdAt) > now + 60_000) {
       return res.status(400).json({ decision: "REJECTED", reason: "Intent is expired or has an invalid creation time." });
     }
-    const policy = evaluatePolicy(intent);
+    const currentDailySpend = await calculateAgentDailySpend(prisma, intent.agentId);
+    const policy = evaluatePolicy(intent, defaultPolicy, {
+      currentDailySpendMinor: currentDailySpend,
+      riskFlags: body.riskFlags ?? intent.riskFlags
+    });
     if (policy.decision === "REJECTED") {
       await prisma.auditEvent.create({ data: { eventType: "INTENT_REJECTED", entityId: intent.intentId, message: policy.reason } });
       return res.status(403).json(policy);
