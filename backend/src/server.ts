@@ -3,7 +3,13 @@ import cors from "cors";
 import { z } from "zod";
 import { config } from "./config.js";
 import { prisma } from "./db.js";
-import { verifyIntentSignature, type SignedIntent } from "./crypto/intent.js";
+import {
+  verifyIntentSignature,
+  type SignedIntent,
+  generateChallenge,
+  verifyChallengeSignature,
+  validateIntentTiming
+} from "./crypto/intent.js";
 import { evaluatePolicy, calculateAgentDailySpend, defaultPolicy } from "./policy.js";
 import { isPayPalConfigured, createPayPalOrder, capturePayPalOrder } from "./paypal.js";
 
@@ -22,19 +28,127 @@ app.get("/api/agents", async (_req, res, next) => {
   } catch (error) { next(error); }
 });
 
+export type ChallengeRecord = {
+  challenge: string;
+  agentId: string;
+  expiresAt: number;
+};
+
+// In-memory store of active registration challenges with 60s TTL
+export const activeChallenges = new Map<string, ChallengeRecord>();
+
+// Periodic challenge cleanup
+setInterval(() => {
+  const now = Date.now();
+  for (const [challenge, record] of activeChallenges.entries()) {
+    if (now > record.expiresAt) {
+      activeChallenges.delete(challenge);
+    }
+  }
+}, 60_000).unref();
+
+app.post("/api/agents/challenge", (req, res, next) => {
+  try {
+    const { agentId } = z.object({ agentId: z.string().min(3).max(100) }).parse(req.body);
+    const challenge = generateChallenge();
+    const expiresAt = Date.now() + 60_000; // 60s validity window
+    activeChallenges.set(challenge, { challenge, agentId, expiresAt });
+
+    res.status(201).json({
+      challenge,
+      agentId,
+      expiresAt: new Date(expiresAt).toISOString(),
+      instructions: "Sign this challenge with your private key and supply signatureBase64 to POST /api/agents to prove key ownership."
+    });
+  } catch (error) { next(error); }
+});
+
 const registerAgentSchema = z.object({
   id: z.string().min(3).max(100),
   name: z.string().min(1).max(150),
-  publicKey: z.string().min(40)
+  publicKey: z.string().min(40),
+  challenge: z.string().optional(),
+  signatureBase64: z.string().optional()
 });
 
 app.post("/api/agents", async (req, res, next) => {
   try {
     const input = registerAgentSchema.parse(req.body);
-    const agent = await prisma.agent.create({ data: input });
-    await prisma.auditEvent.create({ data: { eventType: "AGENT_REGISTERED", entityId: agent.id, message: "Agent registered" } });
+
+    // Cryptographic proof of key ownership verification
+    let verifiedOwnership = false;
+    if (input.challenge || input.signatureBase64) {
+      if (!input.challenge || !input.signatureBase64) {
+        return res.status(400).json({
+          error: "CHALLENGE_VERIFICATION_FAILED",
+          message: "Both challenge and signatureBase64 must be provided for cryptographic key verification."
+        });
+      }
+
+      const record = activeChallenges.get(input.challenge);
+      if (!record) {
+        return res.status(400).json({
+          error: "CHALLENGE_NOT_FOUND",
+          message: "Challenge is invalid or already consumed."
+        });
+      }
+
+      if (Date.now() > record.expiresAt) {
+        activeChallenges.delete(input.challenge);
+        return res.status(400).json({
+          error: "CHALLENGE_EXPIRED",
+          message: "Challenge has expired. Request a new challenge from /api/agents/challenge."
+        });
+      }
+
+      if (record.agentId !== input.id) {
+        return res.status(403).json({
+          error: "CHALLENGE_AGENT_MISMATCH",
+          message: "Challenge was issued for a different agent ID."
+        });
+      }
+
+      const isValid = verifyChallengeSignature(input.challenge, input.signatureBase64, input.publicKey);
+      if (!isValid) {
+        await prisma.auditEvent.create({
+          data: {
+            eventType: "AGENT_REGISTRATION_FAILED",
+            entityId: input.id,
+            message: "Failed cryptographic challenge-response proof of private key ownership"
+          }
+        });
+        return res.status(403).json({
+          error: "INVALID_CHALLENGE_SIGNATURE",
+          message: "Public key does not correspond to the private key that signed the challenge."
+        });
+      }
+
+      // Atomically consume challenge to prevent replay
+      activeChallenges.delete(input.challenge);
+      verifiedOwnership = true;
+    }
+
+    const agent = await prisma.agent.create({
+      data: {
+        id: input.id,
+        name: input.name,
+        publicKey: input.publicKey
+      }
+    });
+
+    await prisma.auditEvent.create({
+      data: {
+        eventType: "AGENT_REGISTERED",
+        entityId: agent.id,
+        message: verifiedOwnership ? "Agent registered with verified challenge-response key ownership" : "Agent registered"
+      }
+    });
+
     const { publicKey: _key, ...safeAgent } = agent;
-    res.status(201).json(safeAgent);
+    res.status(201).json({
+      ...safeAgent,
+      verifiedOwnership
+    });
   } catch (error) { next(error); }
 });
 
@@ -69,9 +183,20 @@ app.post("/api/intents/verify", async (req, res, next) => {
       await prisma.auditEvent.create({ data: { eventType: "INTENT_REJECTED", entityId: intent.intentId, message: "Invalid signature" } });
       return res.status(403).json({ decision: "REJECTED", reason: "Invalid signature." });
     }
-    const now = Date.now();
-    if (Date.parse(intent.expiresAt) <= now || Date.parse(intent.createdAt) > now + 60_000) {
-      return res.status(400).json({ decision: "REJECTED", reason: "Intent is expired or has an invalid creation time." });
+    const timingCheck = validateIntentTiming(intent);
+    if (!timingCheck.valid) {
+      await prisma.auditEvent.create({
+        data: {
+          eventType: "INTENT_REJECTED",
+          entityId: intent.intentId,
+          message: timingCheck.reason ?? "Intent timing validation failed"
+        }
+      });
+      return res.status(400).json({
+        decision: "REJECTED",
+        reason: timingCheck.reason,
+        reasonCode: timingCheck.reasonCode
+      });
     }
     const currentDailySpend = await calculateAgentDailySpend(prisma, intent.agentId);
     const policy = evaluatePolicy(intent, defaultPolicy, {

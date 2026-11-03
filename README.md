@@ -74,9 +74,12 @@ agentshield/
 │       ├── page.tsx               # Security dashboard & transaction viewer
 │       └── globals.css            # Dashboard styling
 │
-├── docs/                          # Architecture & integration documentation
-│   ├── api.md                     # Endpoint quick reference
-│   ├── architecture.md            # System design & boundary specifications
+├── docs/                          # Industry-grade developer documentation
+│   ├── README.md                  # Documentation Hub & Navigation
+│   ├── getting-started.md         # 60-second mental model & quickstart tutorial
+│   ├── architecture.md            # System architecture & transaction state machine
+│   ├── security-model.md          # Ed25519 identity, challenge-response, threat matrix
+│   ├── api.md                     # Complete REST API specification
 │   └── paypal-sandbox-setup.md    # PayPal Developer Sandbox setup guide
 │
 ├── docker-compose.yml             # Local PostgreSQL service definition
@@ -203,9 +206,10 @@ When signing an intent, agents canonicalize the payload with deterministic key o
 - [x] PostgreSQL database schema with Prisma migrations
 - [x] Ed25519 canonical intent signing and verification (`intent.ts`)
 - [x] Database-backed nonce uniqueness and replay rejection (`server.ts`)
-- [x] Automated positive and negative unit tests (`tests/`)
-- [ ] Policy engine rolling daily spend enforcement (`dailyLimitMinor`)
-- [ ] Challenge-response proof of private key ownership on registration
+- [x] Automated positive and negative unit tests (`tests/` — 34 passing tests)
+- [x] Policy engine rolling daily spend enforcement (`dailyLimitMinor`)
+- [x] Challenge-response proof of private key ownership on registration (`POST /api/agents/challenge`)
+- [x] Clock-skew tolerance and 5-minute intent validity window enforcement
 - [ ] PayPal webhook signature verification (`verify-webhook-signature`)
 - [ ] AG Grid interactive audit trail dashboard view
 - [ ] Live autonomous AI buyer agent demonstration script
