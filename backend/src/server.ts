@@ -11,7 +11,13 @@ import {
   validateIntentTiming
 } from "./crypto/intent.js";
 import { evaluatePolicy, calculateAgentDailySpend, defaultPolicy } from "./policy.js";
-import { isPayPalConfigured, createPayPalOrder, capturePayPalOrder } from "./paypal.js";
+import {
+  isPayPalConfigured,
+  createPayPalOrder,
+  capturePayPalOrder,
+  verifyPayPalWebhookSignature,
+  reconcilePayPalWebhookEvent
+} from "./paypal.js";
 
 const app = express();
 app.use(cors({ origin: config.frontendOrigin }));
@@ -281,6 +287,51 @@ app.post("/api/paypal/orders/:orderId/capture", async (req, res, next) => {
     }
     await prisma.paymentIntent.update({ where: { id: intent.id }, data: { status: "REQUIRES_RECONCILIATION" } });
     return res.status(202).json({ status: "REQUIRES_RECONCILIATION", message: "Capture outcome requires reconciliation; do not retry blindly." });
+  } catch (error) { next(error); }
+});
+
+app.post("/api/paypal/webhooks", async (req, res, next) => {
+  try {
+    const event = req.body;
+    if (!event || typeof event !== "object" || !event.id || !event.event_type) {
+      return res.status(400).json({
+        error: "MALFORMED_WEBHOOK_PAYLOAD",
+        message: "Webhook payload must include event id and event_type."
+      });
+    }
+
+    // 1. Verify cryptographic webhook transmission signature
+    const verification = await verifyPayPalWebhookSignature(req.headers as any, req.body);
+    if (!verification.verified) {
+      await prisma.auditEvent.create({
+        data: {
+          eventType: "WEBHOOK_VERIFICATION_FAILED",
+          entityId: event.id,
+          message: `Webhook signature check failed: ${verification.error ?? "Invalid signature"}`
+        }
+      });
+      return res.status(401).json({
+        error: "WEBHOOK_VERIFICATION_FAILED",
+        reason: verification.error ?? "Cryptographic webhook signature check failed."
+      });
+    }
+
+    // 2. Reconcile transaction state & enforce idempotency
+    const result = await reconcilePayPalWebhookEvent(prisma, event);
+
+    if (result.duplicate) {
+      return res.status(200).json({
+        status: "DUPLICATE_EVENT_IGNORED",
+        eventId: event.id,
+        message: "Webhook event was already processed previously."
+      });
+    }
+
+    return res.status(200).json({
+      status: "SUCCESS",
+      eventId: event.id,
+      reconciliation: result
+    });
   } catch (error) { next(error); }
 });
 

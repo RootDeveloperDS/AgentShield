@@ -206,10 +206,10 @@ When signing an intent, agents canonicalize the payload with deterministic key o
 - [x] PostgreSQL database schema with Prisma migrations
 - [x] Ed25519 canonical intent signing and verification (`intent.ts`)
 - [x] Database-backed nonce uniqueness and replay rejection (`server.ts`)
-- [x] Automated positive and negative unit tests (`tests/` — 34 passing tests)
+- [x] Automated positive and negative unit tests (`tests/` — 41 passing tests)
 - [x] Policy engine rolling daily spend enforcement (`dailyLimitMinor`)
 - [x] Challenge-response proof of private key ownership on registration (`POST /api/agents/challenge`)
 - [x] Clock-skew tolerance and 5-minute intent validity window enforcement
-- [ ] PayPal webhook signature verification (`verify-webhook-signature`)
+- [x] PayPal webhook signature verification (`POST /api/paypal/webhooks` with `/v1/notifications/verify-webhook-signature`)
 - [ ] AG Grid interactive audit trail dashboard view
 - [ ] Live autonomous AI buyer agent demonstration script

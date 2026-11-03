@@ -23,6 +23,7 @@ The AgentShield API operates on HTTP/JSON. All monetary amounts are represented 
 | `GET` | `/api/audit` | Query immutable audit log events |
 | `POST` | `/api/paypal/orders` | Create a PayPal Orders v2 order for an approved intent |
 | `POST` | `/api/paypal/orders/:orderId/capture` | Capture an approved PayPal order on the server |
+| `POST` | `/api/paypal/webhooks` | Receive and verify asynchronous PayPal webhook events |
 
 ---
 
@@ -247,4 +248,97 @@ Returns immutable audit events recorded by the system.
     "createdAt": "2026-11-01T12:00:05.125Z"
   }
 ]
+```
+
+---
+
+## 6. PayPal Lifecycle & Webhooks
+
+### `POST /api/paypal/orders`
+Creates a PayPal Orders v2 order for a payment intent that has status `READY_FOR_PAYMENT`.
+
+#### Request Body
+```json
+{
+  "intentId": "intent-sample-101"
+}
+```
+
+#### Response (`201 Created`)
+```json
+{
+  "orderId": "5O190127TN364715T",
+  "status": "CREATED"
+}
+```
+
+---
+
+### `POST /api/paypal/orders/:orderId/capture`
+Executes server-side capture of an approved PayPal order.
+
+#### Response (`200 OK`)
+```json
+{
+  "status": "COMPLETED",
+  "captureId": "3C12345678901234L"
+}
+```
+
+---
+
+### `POST /api/paypal/webhooks`
+Asynchronous webhook listener for authoritative PayPal lifecycle events. Enforces cryptographic webhook transmission signature verification via `/v1/notifications/verify-webhook-signature` and database idempotency.
+
+#### Headers Required
+* `paypal-auth-algo`: Algorithm used to generate the signature (e.g. `SHA256withRSA`).
+* `paypal-cert-url`: URL of the certificate used to verify the signature.
+* `paypal-transmission-id`: Unique transmission UUID.
+* `paypal-transmission-sig`: Base64-encoded transmission signature.
+* `paypal-transmission-time`: Timestamp of the transmission.
+
+#### Sample Request Body (`PAYMENT.CAPTURE.COMPLETED`)
+```json
+{
+  "id": "WH-9876543210-ABCD",
+  "event_type": "PAYMENT.CAPTURE.COMPLETED",
+  "create_time": "2026-11-03T12:00:00.000Z",
+  "resource": {
+    "id": "3C12345678901234L",
+    "custom_id": "intent-sample-101",
+    "status": "COMPLETED"
+  }
+}
+```
+
+#### Response (`200 OK` — Initial Delivery)
+```json
+{
+  "status": "SUCCESS",
+  "eventId": "WH-9876543210-ABCD",
+  "reconciliation": {
+    "processed": true,
+    "duplicate": false,
+    "intentId": "intent-sample-101",
+    "status": "COMPLETED",
+    "action": "UPDATED_TO_COMPLETED"
+  }
+}
+```
+
+#### Response (`200 OK` — Idempotent Duplicate)
+```json
+{
+  "status": "DUPLICATE_EVENT_IGNORED",
+  "eventId": "WH-9876543210-ABCD",
+  "message": "Webhook event was already processed previously."
+}
+```
+
+#### Error Response (`401 Unauthorized`)
+```json
+{
+  "error": "WEBHOOK_VERIFICATION_FAILED",
+  "reason": "Cryptographic webhook signature check failed."
+}
 ```
