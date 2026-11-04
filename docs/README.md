@@ -45,3 +45,10 @@ AgentShield is a deterministic security proxy for autonomous AI-to-AI transactio
 ### 💳 [PayPal Sandbox Setup Guide](./paypal-sandbox-setup.md)
 * Step-by-step developer portal setup for PayPal Sandbox credentials.
 * Order creation and capture testing guidelines.
+
+---
+
+### 📊 [Frontend Dashboard & AG Grid Bounty](./frontend-dashboard.md)
+* Enterprise dark-mode fintech interface built with AG Grid Community v36.
+* Live Transaction Ledger with custom cell renderers, sorting, and CSV export.
+* Interactive Threat Simulation Lab, Cryptographic Drawer, and Human Approval Queue.

@@ -1,10 +1,24 @@
 "use client";
-import { useEffect, useState } from "react";
+
+import { AuditGrid } from "../../components/AuditGrid";
+
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000";
-type Event = {id:string;eventType:string;entityId?:string|null;message:string;createdAt:string};
-export default function AuditPage(){
- const [events,setEvents]=useState<Event[]>([]); const [error,setError]=useState("");
- useEffect(()=>{fetch(`${API}/api/audit`).then(r=>r.json()).then(setEvents).catch(()=>setError("Backend unavailable."));},[]);
- return <main><h1>Audit Log</h1><p className="muted">Security-relevant events recorded by the backend.</p>{error&&<p className="muted">{error}</p>}
- <section className="card">{events.length===0?<p className="muted">No audit events yet.</p>:events.map(e=><p key={e.id} className="muted">{new Date(e.createdAt).toLocaleString()} · <strong>{e.eventType}</strong> · {e.entityId??"—"} · {e.message}</p>)}</section></main>;
+
+export default function AuditPage() {
+  return (
+    <main>
+      <div style={{ marginBottom: 20 }}>
+        <span className="badge badge-sky" style={{ marginBottom: 12 }}>
+          COMPLIANCE & EVENT TELEMETRY
+        </span>
+        <h1>Security Audit Trail</h1>
+        <p className="subtitle">
+          Authoritative, immutable event log capturing cryptographic handshake verifications, policy rule evaluations, replay attack blocks, and asynchronous PayPal webhook state transitions.
+        </p>
+      </div>
+
+      {/* AG Grid Audit Trail */}
+      <AuditGrid apiBaseUrl={API} />
+    </main>
+  );
 }

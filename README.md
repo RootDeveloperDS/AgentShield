@@ -211,5 +211,5 @@ When signing an intent, agents canonicalize the payload with deterministic key o
 - [x] Challenge-response proof of private key ownership on registration (`POST /api/agents/challenge`)
 - [x] Clock-skew tolerance and 5-minute intent validity window enforcement
 - [x] PayPal webhook signature verification (`POST /api/paypal/webhooks` with `/v1/notifications/verify-webhook-signature`)
-- [ ] AG Grid interactive audit trail dashboard view
+- [x] AG Grid interactive audit trail & transaction ledger view (Community v36, custom dark theme, CSV export, live filtering)
 - [ ] Live autonomous AI buyer agent demonstration script
