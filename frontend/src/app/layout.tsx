@@ -20,6 +20,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 
             <div className="nav-links">
               <Link href="/">Dashboard</Link>
+              <Link href="/agent-live" style={{ color: "var(--accent-cyan)", fontWeight: 700 }}>
+                🤖 AI Agent Live
+              </Link>
               <Link href="/threat-demo">Threat Lab</Link>
               <Link href="/approvals">Approvals</Link>
               <Link href="/audit">Audit Trail</Link>
@@ -36,7 +39,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 
           <footer>
             <div>
-              <strong>AgentShield Gateway v1.4.0</strong> · Zero-Trust Financial Firewall for Autonomous AI Agents.
+              <strong>AgentShield Gateway v1.5.0</strong> · Zero-Trust Financial Firewall for Autonomous AI Agents · Powered by <strong>Groq (openai/gpt-oss-20b)</strong>
             </div>
             <div style={{ display: "flex", gap: 16 }}>
               <span>Powered by <strong>AG Grid Community</strong></span>

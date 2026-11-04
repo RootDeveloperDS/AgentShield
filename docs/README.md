@@ -52,3 +52,11 @@ AgentShield is a deterministic security proxy for autonomous AI-to-AI transactio
 * Enterprise dark-mode fintech interface built with AG Grid Community v36.
 * Live Transaction Ledger with custom cell renderers, sorting, and CSV export.
 * Interactive Threat Simulation Lab, Cryptographic Drawer, and Human Approval Queue.
+
+---
+
+### 🤖 [Autonomous AI Buyer Agent & Zero-Trust Observatory](./ai-buyer-agent.md)
+* Autonomous procurement engine powered by **Groq (`openai/gpt-oss-20b`)**.
+* Dual-scenario demonstration: Legitimate \$25.00 procurement vs. Adversarial \$600.00 prompt injection.
+* Visual 5-stage real-time execution timeline and telemetry inspector.
+* Terminal CLI showcase (`npm run demo:ai`) and automated testing guide.

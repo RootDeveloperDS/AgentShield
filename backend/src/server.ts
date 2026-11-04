@@ -18,6 +18,7 @@ import {
   verifyPayPalWebhookSignature,
   reconcilePayPalWebhookEvent
 } from "./paypal.js";
+import { runAutonomousBuyerAgent } from "./ai/buyerAgent.js";
 
 const app = express();
 app.use(cors({ origin: config.frontendOrigin }));
@@ -338,6 +339,32 @@ app.post("/api/paypal/webhooks", async (req, res, next) => {
 app.get("/api/audit", async (_req, res, next) => {
   try { res.json(await prisma.auditEvent.findMany({ orderBy: { createdAt: "desc" }, take: 100 })); }
   catch (error) { next(error); }
+});
+
+app.get("/api/agent/status", (_req, res) => {
+  const groqKey = process.env.GROQ_API_KEY?.trim();
+  const isGroqConfigured = Boolean(
+    groqKey && !groqKey.includes("your_groq_api_key_here") && groqKey.startsWith("gsk_")
+  );
+  res.json({
+    model: process.env.GROQ_MODEL || "openai/gpt-oss-20b",
+    provider: "Groq",
+    isConfigured: isGroqConfigured,
+    paypalConfigured: isPayPalConfigured(),
+    agentId: "agent-autonomous-buyer"
+  });
+});
+
+app.post("/api/agent/run-autonomous-demo", async (req, res, next) => {
+  try {
+    const schema = z.object({
+      scenario: z.enum(["LEGITIMATE_PROCUREMENT", "PROMPT_INJECTION_ATTACK"]),
+      customGoal: z.string().optional()
+    });
+    const parsed = schema.parse(req.body);
+    const result = await runAutonomousBuyerAgent(parsed);
+    res.json(result);
+  } catch (error) { next(error); }
 });
 
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
