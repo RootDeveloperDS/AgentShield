@@ -2,6 +2,16 @@
 
 > **Verify the agent. Validate the intent. Secure the payment.**
 
+[![Live Web App](https://img.shields.io/badge/Live%20Demo-agent--shield--as.vercel.app-blue?style=for-the-badge&logo=vercel)](https://agent-shield-as.vercel.app)
+[![API Status](https://img.shields.io/badge/API%20Gateway-Online%20(Render)-emerald?style=for-the-badge&logo=render)](https://agentshield-api-wf3q.onrender.com/health)
+[![Model](https://img.shields.io/badge/Groq-openai%2Fgpt--oss--20b-purple?style=for-the-badge)](https://agent-shield-as.vercel.app/agent-live)
+
+* **🌐 Live Production Application:** [https://agent-shield-as.vercel.app](https://agent-shield-as.vercel.app)
+* **🤖 Live AI Buyer Agent Observatory:** [https://agent-shield-as.vercel.app/agent-live](https://agent-shield-as.vercel.app/agent-live)
+* **⚡ Threat Simulation Lab (5 Vectors):** [https://agent-shield-as.vercel.app/threat-demo](https://agent-shield-as.vercel.app/threat-demo)
+* **📜 Immutable Security Audit Trail:** [https://agent-shield-as.vercel.app/audit](https://agent-shield-as.vercel.app/audit)
+* **📡 Backend API Endpoint:** [https://agentshield-api-wf3q.onrender.com](https://agentshield-api-wf3q.onrender.com)
+
 AgentShield is a deterministic security proxy and verification gateway for autonomous AI-to-AI payments. Before any payment is authorized or executed via payment processors (such as PayPal), AgentShield cryptographically verifies agent identity via Ed25519 public keys, validates signed canonical intents, enforces deterministic policy limits, prevents replay attacks, and writes an immutable audit trail.
 
 ---
