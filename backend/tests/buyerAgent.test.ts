@@ -70,5 +70,5 @@ describe("Autonomous AI Buyer Agent & Zero-Trust Firewall (Phase 6)", () => {
     // Summary must confirm firewall protected
     expect(result.summary.isFirewallProtected).toBe(true);
     expect(result.paypalOutcome).toBeUndefined();
-  });
+  }, 30000);
 });

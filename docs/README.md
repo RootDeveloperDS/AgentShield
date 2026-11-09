@@ -60,3 +60,10 @@ AgentShield is a deterministic security proxy for autonomous AI-to-AI transactio
 * Dual-scenario demonstration: Legitimate \$25.00 procurement vs. Adversarial \$600.00 prompt injection.
 * Visual 5-stage real-time execution timeline and telemetry inspector.
 * Terminal CLI showcase (`npm run demo:ai`) and automated testing guide.
+
+---
+
+### 🌐 [Production Deployment Guide (0 to 100)](./deployment-guide.md)
+* Complete end-to-end cloud deployment: Neon PostgreSQL + Render (Backend) + Vercel (Frontend).
+* PayPal Sandbox live HTTPS webhook registration without tunnels.
+* Environment variables checklist, build commands, and live smoke test verification.

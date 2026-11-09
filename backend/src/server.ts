@@ -21,7 +21,22 @@ import {
 import { runAutonomousBuyerAgent } from "./ai/buyerAgent.js";
 
 const app = express();
-app.use(cors({ origin: config.frontendOrigin }));
+const allowedOrigins = (config.frontendOrigin || "http://localhost:3000")
+  .split(",")
+  .map((s) => s.trim());
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    if (allowedOrigins.some((ao) => ao.includes("vercel.app") && origin.endsWith(".vercel.app"))) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true
+}));
 app.use(express.json({ limit: "256kb" }));
 
 app.get("/health", (_req, res) => {
